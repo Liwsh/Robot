@@ -1,7 +1,6 @@
 /*
  * capturing from UVC cam
  * requires: libjpeg-dev
- * build: gcc -std=c99 capture.c -ljpeg -o capture
  */
 
 #include <stdint.h>
@@ -40,7 +39,7 @@ typedef struct {
 	buffer_t head;
 } camera_t;
 
-/*�������Ķ�д��ʽ������ͷ�������ò���*/
+/*非阻塞的读写方式打开摄像头，并设置参数*/
 camera_t* camera_open(const char * device, uint32_t width, uint32_t height) {
 	int fd = open(device, O_RDWR | O_NONBLOCK, 0);
 	if (fd == -1)
@@ -56,14 +55,14 @@ camera_t* camera_open(const char * device, uint32_t width, uint32_t height) {
 	return camera;
 }
 
-/*��ʼ������ͷ*/
+/*初始化摄像头*/
 void camera_init(camera_t* camera) {
 	/*
-	 * ��������VIDIOC_QUERYCAP
-	 *���ܣ� ��ѯ��Ƶ�豸�Ĺ��� ��
-	 *����˵������������ΪV4L2��������������struct v4l2_capability ��
-	 *����ֵ˵���� ִ�гɹ�ʱ����������ֵΪ 0������ִ�гɹ���struct v4l2_capability �ṹ������еķ���
-	 *��ǰ��Ƶ�豸��֧�ֵĹ���;����֧����Ƶ������V4L2_CAP_VIDEO_CAPTURE��V4L2_CAP_STREAMING�ȡ�
+	 * 控制命令VIDIOC_QUERYCAP
+	 *功能： 查询视频设备的功能 ；
+	 *参数说明：参数类型为V4L2的能力描述类型struct v4l2_capability ；
+	 *返回值说明： 执行成功时，函数返回值为 0；函数执行成功后，struct v4l2_capability 结构体变量中的返回
+	 *当前视频设备所支持的功能;例如支持视频捕获功能V4L2_CAP_VIDEO_CAPTURE、V4L2_CAP_STREAMING等。
 	 */
 	struct v4l2_capability cap;
 	if (xioctl(camera->fd, VIDIOC_QUERYCAP, &cap) == -1)
@@ -74,13 +73,13 @@ void camera_init(camera_t* camera) {
 		quit("no streaming");
 
 /*
- *��������VIDIOC_CROPCAP
- *���ܣ� ��ѯ�������޼�����
- *���ܣ� ��Ƶ��׽�豸���Ͻǣ���ȡ������Ŀ��߿���ͨ��VIDIOC_CRAOCAP ���ص�struct v4l2_cropcap�ṹ���е�bound�ӳ�Ա�ṹ�������
- *���Ͻ�Դ���εĿ�����ʵ����ȡ��������ͨ��struct v4l2_crop�ṹ�����������ϵͳ��struct v4l2_cropcap��ͬ��
- *Ӧ�ó������ͨ��ʹ��VIDIOC_G_CROP��VIDIOC_S_CROP ioctl����ȡ�����þ���������������ȫ�ڲ�׽��Χ�ڣ���������֮����ܸ���Ӳ
- *�������޸�������ĳߴ缰����λ�á�ÿ����׽�豸����һ��Ĭ�ϵ�Դ���Σ�ͨ��struct v4l2_cropcap�ṹ���е�defrect��Ա�ṹ�������
- *���ε�����Ӧ������Ƶ�ź��еĻ�ԾͼƬ�������Ķ�׼���Һ���������д�������ĵ�����ͼƬ��
+ *控制命令VIDIOC_CROPCAP
+ *功能： 查询驱动的修剪能力
+ *功能： 视频捕捉设备左上角，可取样区域的宽高可以通过VIDIOC_CRAOCAP 返回的struct v4l2_cropcap结构体中的bound子成员结构体给出。
+ *左上角源矩形的宽高是实际能取样的区域，通过struct v4l2_crop结构体给出，坐标系统与struct v4l2_cropcap相同。
+ *应用程序可以通过使用VIDIOC_G_CROP和VIDIOC_S_CROP ioctl来获取和设置矩形区域。它必须完全在捕捉范围内，而且驱动之后可能根据硬
+ *件限制修改所请求的尺寸及（或）位置。每个捕捉设备都有一个默认的源矩形，通过struct v4l2_cropcap结构提中的defrect成员结构体给出。
+ *矩形的中心应该与视频信号中的活跃图片区域中心对准，且涵盖驱动编写者所关心的完整图片。
 */
 	struct v4l2_cropcap cropcap;
 	memset(&cropcap, 0, sizeof cropcap);
@@ -95,10 +94,10 @@ void camera_init(camera_t* camera) {
 	}
 
 	/*
-	 * ��������VIDIOC_S_FMT
-	 *���ܣ� ������Ƶ�豸����Ƶ���ݸ�ʽ������������Ƶͼ�����ݵĳ�������ͼ���ʽ��JPEG��YUYV��ʽ����
-	 *����˵������������ΪV4L2����Ƶ���ݸ�ʽ����    struct v4l2_format  ��
-	 *����ֵ˵���� ִ�гɹ�ʱ����������ֵΪ 0��
+	 * 控制命令VIDIOC_S_FMT
+	 *功能： 设置视频设备的视频数据格式，例如设置视频图像数据的长、宽，图像格式（JPEG、YUYV格式）；
+	 *参数说明：参数类型为V4L2的视频数据格式类型    struct v4l2_format  ；
+	 *返回值说明： 执行成功时，函数返回值为 0；
 	 */
 	struct v4l2_format format;
 	memset(&format, 0, sizeof format);
@@ -111,13 +110,13 @@ void camera_init(camera_t* camera) {
 		quit("VIDIOC_S_FMT");
 
 	/*
-	 *��������VIDIOC_REQBUFS
-	 *���ܣ� ����V4L2����������Ƶ������������V4L2��Ƶ���������ڴ棩��V4L2����Ƶ�豸�������㣬
-	 *λ���ں˿ռ䣬����ͨ��VIDIOC_REQBUFS����������������ڴ�λ���ں˿ռ䣬Ӧ�ó�����ֱ�ӷ��ʣ�
-	 *��Ҫͨ������mmap�ڴ�ӳ�亯�����ں˿ռ��ڴ�ӳ�䵽�û��ռ��Ӧ�ó���ͨ�������û��ռ��ַ�������ں˿ռ䡣
-	 *����˵������������ΪV4L2�����뻺�������ݽṹ������struct v4l2_requestbuffers  ��
-	 *����ֵ˵���� ִ�гɹ�ʱ����������ֵΪ 0��V4L2��������� ������Ƶ��������
-	 *���뻺�壬count�����������
+	 *控制命令VIDIOC_REQBUFS
+	 *功能： 请求V4L2驱动分配视频缓冲区（申请V4L2视频驱动分配内存），V4L2是视频设备的驱动层，
+	 *位于内核空间，所以通过VIDIOC_REQBUFS控制命令字申请的内存位于内核空间，应用程序不能直接访问，
+	 *需要通过调用mmap内存映射函数把内核空间内存映射到用户空间后，应用程序通过访问用户空间地址来访问内核空间。
+	 *参数说明：参数类型为V4L2的申请缓冲区数据结构体类型struct v4l2_requestbuffers  ；
+	 *返回值说明： 执行成功时，函数返回值为 0；V4L2驱动层分配 好了视频缓冲区；
+	 *申请缓冲，count是申请的数量
 	 */
 	struct v4l2_requestbuffers req;
 	memset(&req, 0, sizeof req);
@@ -130,13 +129,13 @@ void camera_init(camera_t* camera) {
 	camera->buffers = calloc(req.count, sizeof(buffer_t));
 
 	/*
-	 *��������VIDIOC_QUERYBUF
-	 *���ܣ� ��ѯ�Ѿ������V4L2����Ƶ�������������Ϣ��������Ƶ��������ʹ��״̬�����ں˿ռ��ƫ�Ƶ�ַ�����������ȵȡ�
-	 *��Ӧ�ó��������ͨ����VIDIOC_QUERYBUF����ȡ�ں˿ռ����Ƶ��������Ϣ��Ȼ����ú���mmap���ں˿ռ��ַӳ��
-	 *���û��ռ䣬����Ӧ�ó�����ܹ�����λ���ں˿ռ����Ƶ��������
-	 *����˵������������ΪV4L2���������ݽṹ����    struct v4l2_buffer  ��
-	 *����ֵ˵���� ִ�гɹ�ʱ����������ֵΪ 0��struct v4l2_buffer�ṹ������б�����ָ��Ļ������������Ϣ��
-	 *һ������£�Ӧ�ó����е���VIDIOC_QUERYBUFȡ�����ں˻�������Ϣ�󣬽����ŵ���mmap�������ں˿ռ��ַӳ�䵽�û��ռ䣬�����û��ռ�Ӧ�ó���ķ��ʡ�
+	 *控制命令VIDIOC_QUERYBUF
+	 *功能： 查询已经分配的V4L2的视频缓冲区的相关信息，包括视频缓冲区的使用状态、在内核空间的偏移地址、缓冲区长度等。
+	 *在应用程序设计中通过调VIDIOC_QUERYBUF来获取内核空间的视频缓冲区信息，然后调用函数mmap把内核空间地址映射
+	 *到用户空间，这样应用程序才能够访问位于内核空间的视频缓冲区。
+	 *参数说明：参数类型为V4L2缓冲区数据结构类型    struct v4l2_buffer  ；
+	 *返回值说明： 执行成功时，函数返回值为 0；struct v4l2_buffer结构体变量中保存了指令的缓冲区的相关信息；
+	 *一般情况下，应用程序中调用VIDIOC_QUERYBUF取得了内核缓冲区信息后，紧接着调用mmap函数把内核空间地址映射到用户空间，方便用户空间应用程序的访问。
 	 */
 	size_t buf_max = 0;
 	size_t i;
@@ -161,12 +160,12 @@ void camera_init(camera_t* camera) {
 
 void camera_start(camera_t* camera) {
 	/*
-	 *��������VIDIOC_QBUF
-	 *���ܣ� Ͷ��һ���յ���Ƶ����������Ƶ��������������� ��
-	 *����˵������������ΪV4L2���������ݽṹ����    struct v4l2_buffer ��
-	 *����ֵ˵���� ִ�гɹ�ʱ����������ֵΪ 0������ִ�гɹ���ָ��(ָ��)����Ƶ������������Ƶ������У�
-	 *����ֵ˵���� ��������Ƶ�豸����ͼ��ʱ����Ӧ����Ƶ���ݱ����浽��Ƶ���������Ӧ����Ƶ�������С�
-	 *���뵽�Ļ�������ж�
+	 *控制命令VIDIOC_QBUF
+	 *功能： 投放一个空的视频缓冲区到视频缓冲区输入队列中 ；
+	 *参数说明：参数类型为V4L2缓冲区数据结构类型    struct v4l2_buffer ；
+	 *返回值说明： 执行成功时，函数返回值为 0；函数执行成功后，指令(指定)的视频缓冲区进入视频输入队列，
+	 *返回值说明： 在启动视频设备拍摄图像时，相应的视频数据被保存到视频输入队列相应的视频缓冲区中。
+	 *申请到的缓冲进入列队
 	 */
 	size_t i;
 	for (i = 0; i < camera->buffer_count; i++) {
@@ -180,13 +179,13 @@ void camera_start(camera_t* camera) {
 	}
 
 	/*
-	 *��������VIDIOC_STREAMON
-	 *���ܣ� ������Ƶ�ɼ����Ӧ�ó������VIDIOC_STREAMON������Ƶ�ɼ������
-	 *��Ƶ�豸��������ʼ�ɼ���Ƶ���ݣ����Ѳɼ�������Ƶ���ݱ��浽��Ƶ��������Ƶ�������С�
-	 *����˵������������ΪV4L2����Ƶ���������� enum v4l2_buf_type ��
-	 *����ֵ˵���� ִ�гɹ�ʱ����������ֵΪ 0������ִ�гɹ�����Ƶ�豸��������ʼ�ɼ���Ƶ���ݣ�
-	 *��ʱӦ�ó���һ��ͨ������select�������ж�һ֡��Ƶ�����Ƿ�ɼ���ɣ�����Ƶ�豸�������һ֡
-	 *��Ƶ���ݲɼ������浽��Ƶ��������ʱ��select�������أ�Ӧ�ó�����ſ��Զ�ȡ��Ƶ���ݣ�����select��������ֱ����Ƶ���ݲɼ���ɡ�
+	 *控制命令VIDIOC_STREAMON
+	 *功能： 启动视频采集命令，应用程序调用VIDIOC_STREAMON启动视频采集命令后，
+	 *视频设备驱动程序开始采集视频数据，并把采集到的视频数据保存到视频驱动的视频缓冲区中。
+	 *参数说明：参数类型为V4L2的视频缓冲区类型 enum v4l2_buf_type ；
+	 *返回值说明： 执行成功时，函数返回值为 0；函数执行成功后，视频设备驱动程序开始采集视频数据，
+	 *此时应用程序一般通过调用select函数来判断一帧视频数据是否采集完成，当视频设备驱动完成一帧
+	 *视频数据采集并保存到视频缓冲区中时，select函数返回，应用程序接着可以读取视频数据；否则select函数阻塞直到视频数据采集完成。
 	 */
 	enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	if (xioctl(camera->fd, VIDIOC_STREAMON, &type) == -1)
@@ -220,11 +219,11 @@ void camera_close(camera_t* camera) {
 
 int camera_capture(camera_t* camera) {
 	/*
-	 *��������VIDIOC_DQBUF
-	 *���ܣ� ����Ƶ�����������������ȡ��һ���Ѿ�������һ֡��Ƶ���ݵ���Ƶ��������
-	 *����˵������������ΪV4L2���������ݽṹ����    struct v4l2_buffer ��
-	 *����ֵ˵���� ִ�гɹ�ʱ����������ֵΪ 0����Ӧ���ں���Ƶ�������б����е�ǰ���㵽����Ƶ���ݣ�Ӧ�ó������ͨ�������û��ռ�����ȡ����Ƶ���ݡ�
-	 *ǰ���Ѿ�ͨ�����ú���mmap�����û��ռ���ں˿ռ���ڴ�ӳ�䡣
+	 *控制命令VIDIOC_DQBUF
+	 *功能： 从视频缓冲区的输出队列中取得一个已经保存有一帧视频数据的视频缓冲区；
+	 *参数说明：参数类型为V4L2缓冲区数据结构类型    struct v4l2_buffer ；
+	 *返回值说明： 执行成功时，函数返回值为 0，相应的内核视频缓冲区中保存有当前拍摄到的视频数据，应用程序可以通过访问用户空间来读取该视频数据。
+	 *前面已经通过调用函数mmap做了用户空间和内核空间的内存映射。
 	 */
 	struct v4l2_buffer buf;
 	memset(&buf, 0, sizeof buf);
@@ -292,17 +291,17 @@ int minmax(int min, int v, int max) {
 	return (v < min) ? min : (max < v) ? max : v;
 }
 
-/*yuyv��ʽתrgb��ʽ
- *ԭʼ�������������� Y0 U0 V0 ,Y1 U1 V1,Y2 U2 V2,Y3 U3 V3
- *����4��2��2���������ݱ���� Y0 U0 ,Y1 V1 ,Y2 U2,Y3 V3
- *�����ԭ����ΪĳһЩ���ݶ�ʧ�Ͳ��� Y0 U0 V1,Y1 U0 V1,Y2 U2 V3 ,Y3 U3 Y2
- * R = Y + 1.4075 *��V-128��
- * G = Y �C 0.3455 *��U �C128�� �C 0.7169 *��V �C128��
- * B = Y + 1.779 *��U �C 128��
- * �����������㣬�ӿ������ٶȣ�y������ϵ��������256
- * һ��Y����һ�����أ���һ��Y��UV�����������һ�����أ����Ե�0������Y0�͵�һ������Y1���ǹ��õ�0�����ص�U0��V0��
- * ����Y0U0Y1V0�൱���������أ�ռ����4���ֽڵĴ洢�ռ䣬ƽ��һ������ռ�������ֽڡ�
- * RGBɫ��ģʽһ�������������������ɣ���һ������ռ�������ֽڡ�
+/*yuyv格式转rgb格式
+ *原始数据三个像素是 Y0 U0 V0 ,Y1 U1 V1,Y2 U2 V2,Y3 U3 V3
+ *经过4：2：2采样后，数据变成了 Y0 U0 ,Y1 V1 ,Y2 U2,Y3 V3
+ *如果还原后，因为某一些数据丢失就补成 Y0 U0 V1,Y1 U0 V1,Y2 U2 V3 ,Y3 U3 Y2
+ * R = Y + 1.4075 *（V-128）
+ * G = Y – 0.3455 *（U –128） – 0.7169 *（V –128）
+ * B = Y + 1.779 *（U – 128）
+ * 采用整形运算，加快运算速度，y分量和系数都扩大256
+ * 一个Y代表一个像素，而一个Y和UV组合起来构成一个像素，所以第0个像素Y0和第一个像素Y1都是共用第0个像素的U0和V0。
+ * 所以Y0U0Y1V0相当于两个像素，占用了4个字节的存储空间，平均一个像素占用两个字节。
+ * RGB色彩模式一个像素由三个分量构成，即一个像素占用三个字节。
  */
 
 uint8_t* yuyv2rgb(uint8_t* yuyv, uint32_t width, uint32_t height) {
@@ -327,7 +326,7 @@ uint8_t* yuyv2rgb(uint8_t* yuyv, uint32_t width, uint32_t height) {
 }
 
 int camera() {
-	/*���豸�����ò���*/
+	/*打开设备并设置参数*/
 	camera_t* camera = camera_open("/dev/video0", 640, 480);
 
 	camera_init(camera);
@@ -337,7 +336,7 @@ int camera() {
 	struct timeval timeout;
 	timeout.tv_sec = 1;
 	timeout.tv_usec = 0;
-	/* skip 5 frames for booting a cam */
+
 	for (i = 0; i < 5; i++) {
 		camera_frame(camera, timeout);
 	}
@@ -353,6 +352,6 @@ int camera() {
 	camera_stop(camera);
 	camera_finish(camera);
 	camera_close(camera);
-	  system("python facedetect.py result.jpg");
+	system("python facedetect.py result.jpg");
 	return 0;
 }
