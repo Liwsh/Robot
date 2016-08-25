@@ -14,17 +14,17 @@ mraa_result_t haltPwm() {
 	return mraa_pwm_enable(m_pwmServoContext, 0);
 }
 int calcPulseTraveling(int value) {
-	// if bigger than the boundaries
+	// 超过最大边界
 	if (value > m_maxAngle) {
 		return m_maxPulseWidth;
 	}
 
-	// if less than the boundaries
+	// 低于最小边界
 	if (value < 0) {
 		return m_minPulseWidth;
 	}
 
-	// the conversion
+	// 转换
 	return (int) ((float) m_minPulseWidth
 			+ ((float) value / m_maxAngle)
 					* ((float) m_maxPulseWidth - (float) m_minPulseWidth));
@@ -46,7 +46,7 @@ int setAngle(int angle, int pin) {
 	}
 
 	if (m_waitAndDisablePwm) {
-		sleep(1); // we must make sure that we don't turn off PWM before the servo is done moving.
+		sleep(1); 
 		haltPwm();
 	}
 
