@@ -1,86 +1,65 @@
 /*
  * sensor.h
  *
- *  Created on: 2016ƒÍ7‘¬14»’
- *      Author: Administrator
+ *  Created on: 2016Âπ¥8Êúà3Êó•
+ *      Author: ÊùéÊñáËÉú
  */
-
 #ifndef SENSOR_H_
 #define SENSOR_H_
-
+#include <stdio.h>
+#include <stdlib.h>
 #include <pthread.h>
-#include <unistd.h>
-#include <sys/time.h>
-#include "mraa.h"
-
-#define MAX_BUFFER_LENGTH 6
-#define MAX_BUFFER_LENGTH 6
+/*
+ * ÈÖçÁΩÆÁîµÂ≠êÁΩóÁõòÂèÇÊï∞
+ */
+#define MPU6050_DEFAULT_ADDRESS 0x68
+#define MPU6050_RA_PWR_MGMT_1	0x6B
+#define MPU6050_RA_ACCEL_XOUT_H 0x3B
+#define MPU6050_RA_GYRO_CONFIG	0x1B
+#define MPU6050_RA_ACCEL_CONFIG 0x1C
+#define MPU6050_CLOCK_PLL_XGYRO 0x01
+#define MPU6050_GYRO_FS_250   	0x00
+#define MPU6050_ACCEL_FS_2		0x00
+#define PI 3.1415926535897932384626433832795
 #define HMC5883L_I2C_ADDR 0x1E
-
-//configuration registers
 #define HMC5883L_CONF_REG_A 0x00
 #define HMC5883L_CONF_REG_B 0x01
-
-//mode register
 #define HMC5883L_MODE_REG 0x02
-
-//data register
-#define HMC5883L_X_MSB_REG 0
-#define HMC5883L_X_LSB_REG 1
-#define HMC5883L_Z_MSB_REG 2
-#define HMC5883L_Z_LSB_REG 3
-#define HMC5883L_Y_MSB_REG 4
-#define HMC5883L_Y_LSB_REG 5
-#define DATA_REG_SIZE 6
-
-//status register
-#define HMC5883L_STATUS_REG 0x09
-
-//ID registers
-#define HMC5883L_ID_A_REG 0x0A
-#define HMC5883L_ID_B_REG 0x0B
-#define HMC5883L_ID_C_REG 0x0C
-
 #define HMC5883L_CONT_MODE 0x00
 #define HMC5883L_DATA_REG 0x03
-
-//scales
-#define GA_0_88_REG 0x00 << 5
-#define GA_1_3_REG 0x01 << 5
-#define GA_1_9_REG 0x02 << 5
-#define GA_2_5_REG 0x03 << 5
-#define GA_4_0_REG 0x04 << 5
-#define GA_4_7_REG 0x05 << 5
-#define GA_5_6_REG 0x06 << 5
-#define GA_8_1_REG 0x07 << 5
-
-//digital resolutions
-#define SCALE_0_73_MG 0.73
-#define SCALE_0_92_MG 0.92
+#define GA_1_3_REG 0x20
 #define SCALE_1_22_MG 1.22
-#define SCALE_1_52_MG 1.52
-#define SCALE_2_27_MG 2.27
-#define SCALE_2_56_MG 2.56
-#define SCALE_3_03_MG 3.03
-#define SCALE_4_35_MG 4.35
 
+#define MAX_WAIT 10000
+
+/*
+ * Ë∂ÖÂ£∞Ê≥¢Ë∑ùÁ¶ªÔºå‰∏äÊ¨°ÊµãÈáèÂíåÂΩìÂâçÊµãÈáèÁä∂ÊÄÅÂÄº
+ */
+int distence;
+int inp, pre;
+/*
+ * ÁîµÂ≠êÁΩóÁõòÂèÇÊï∞
+ */
+unsigned char devAddr;
 int16_t m_coor[3];
 float m_declination;
-uint8_t m_rx_tx_buf[MAX_BUFFER_LENGTH];
-int rec_flag;    //∂¡»° ˝æ›◊¥Ã¨±Í÷æŒª
-int acc_flag;	 //≈◊∆˙ ˝æ›∞¸Õ∑±Í÷æŒª
-int ang_flag;
-int angch_flag;
-unsigned char buffer[3];	// ˝æ›Ω” ’ ˝◊È
-
+float changle;
+int angflag;
+int angle;
+unsigned char  h_buf[6];
+/*
+ * ‰∫íÊñ•ÈîÅÂíåÂêåÊ≠•Êù°‰ª∂
+ */
 pthread_mutex_t mutex;
 pthread_cond_t cond;
 pthread_mutex_t mutex1;
 pthread_cond_t cond1;
-int inp = 1, pre = 0;
-/*leftŒ™ƒÊ ±’Î–˝◊™£¨Ω«∂»Œ™’˝£¨rightŒ™À≥ ±’Î–˝◊™£¨Ω«∂»Œ™∏∫*/
-void *ultrasonic(void *threadid);
-void *buzzer(void *threadid);
-void *hmc(void *threadid);
-
+float roll,pitch,yaw;
+int16_t ax, ay, az, gx, gy, gz; //ÈôÄËû∫‰ª™ÂéüÂßãÊï∞ÊçÆ 3‰∏™Âä†ÈÄüÂ∫¶+3‰∏™ËßíÈÄüÂ∫¶
+unsigned char mpubuffer[14];
+int irleft();
+int irright();
+int *ultrasonic();
+int *warning(void *threadid);
+int *hmc(void *threadid);
 #endif /* SENSOR_H_ */
