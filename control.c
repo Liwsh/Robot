@@ -1,7 +1,7 @@
 /*
  * control.c
  *
- *  Created on: 2016Äê8ÔÂ6ÈÕ
+ *  Created on: 2016-7
  *      Author: Administrator
  */
 #include <stdio.h>
